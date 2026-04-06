@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Turnos - Versión Examen</title>
+    
+    <!-- React y ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- React Router DOM -->
+    <script crossorigin src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    
+    <!-- Babel para JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #64748b;
+            --danger: #ef4444;
+            --danger-bg: #fee2e2;
+            --success: #22c55e;
+            --success-bg: #dcfce7;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        body { background-color: var(--background); color: var(--text-main); line-height: 1.5; }
+
+        /* Layouts */
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        header { background-color: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 0; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); position: sticky; top: 0; z-index: 10; }
+        .nav-content { display: flex; justify-content: space-between; align-items: center; }
+        .nav-brand { font-size: 1.25rem; font-weight: bold; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+        .nav-links { display: flex; gap: 1rem; align-items: center; }
+        
+        /* Botones */
+        .btn { padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; justify-content: center;}
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-danger:hover { opacity: 0.9; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background-color: var(--background); border-color: var(--text-light); }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Formularios */
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main); font-size: 0.9rem; }
+        .form-input, .form-textarea, .form-select { width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.375rem; font-size: 1rem; transition: border-color 0.2s; }
+        .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
+        .form-textarea { resize: vertical; min-height: 80px; }
+        .error-text { color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem; }
+
+        /* Tablas */
+        .table-container { overflow-x: auto; background: var(--surface); border-radius: 0.5rem; border: 1px solid var(--border); box-shadow: var(--shadow); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        th { background-color: #f8fafc; font-weight: 600; color: var(--text-light); white-space: nowrap; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #f8fafc; }
+        
+        /* Tarjetas (Turnos) */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        .card { background: var(--surface); border-radius: 0.5rem; padding: 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; height: 100%; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; }
+        .card-title { font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem; line-height: 1.2; }
+        .card-subtitle { font-size: 0.875rem; color: var(--text-light); font-weight: 500; }
+        .card-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+        .badge-active { background-color: #dbeafe; color: #1e40af; }
+        .badge-full { background-color: #fee2e2; color: #991b1b; }
+        .card-body { flex-grow: 1; margin-bottom: 1rem; }
+        .card-body p { margin-bottom: 0.5rem; color: var(--text-light); font-size: 0.9rem; }
+        .card-desc { background-color: #f1f5f9; padding: 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; color: #475569; margin-top: 0.75rem; border-left: 3px solid var(--secondary); font-style: italic; }
+        .card-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 50; backdrop-filter: blur(2px); animation: fadeIn 0.2s ease-out; }
+        .modal-content { background: var(--surface); padding: 2rem; border-radius: 0.75rem; width: 100%; max-width: 600px; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-title { font-size: 1.5rem; font-weight: 700; color: var(--text-main); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+        /* Toast Notifications */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 1rem 1.5rem; border-radius: 0.5rem; color: white; font-weight: 500; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); min-width: 300px; animation: slideInRight 0.3s ease-out; display: flex; align-items: center; justify-content: space-between; }
+        .toast-success { background-color: var(--success); }
+        .toast-error { background-color: var(--danger); }
+
+        /* Animaciones */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Utilidades */
+        .text-center { text-align: center; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mt-4 { margin-top: 1rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-muted { color: var(--text-light); }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 0.5rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .full-width { grid-column: 1 / -1; }
+
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .nav-content { flex-direction: column; gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useContext, createContext, useMemo } = React;
+        const { HashRouter, Routes, Route, Link, useNavigate, Outlet, Navigate, useLocation } = ReactRouterDOM;
+
+        // ==========================================
+        // UTILIDADES & HELPERS
+        // ==========================================
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+
+        // Sistema de Toast (Notificaciones) para no usar alert()
+        const ToastContext = createContext();
+        const ToastProvider = ({ children }) => {
+            const [toasts, setToasts] = useState([]);
+
+            const addToast = (message, type = 'success') => {
+                const id = Date.now();
+                setToasts(prev => [...prev, { id, message, type }]);
+                setTimeout(() => removeToast(id), 4000);
+            };
+
+            const removeToast = (id) => {
+                setToasts(prev => prev.filter(t => t.id !== id));
+            };
+
+            return (
+                <ToastContext.Provider value={{ addToast }}>
+                    {children}
+                    <div className="toast-container">
+                        {toasts.map(t => (
+                            <div key={t.id} className={`toast toast-${t.type}`}>
+                                <span>{t.message}</span>
+                                <button onClick={() => removeToast(t.id)} style={{background:'none', border:'none', color:'white', cursor:'pointer', marginLeft:'10px'}}>✕</button>
+                            </div>
+                        ))}
+                    </div>
+                </ToastContext.Provider>
+            );
+        };
+        const useToast = () => useContext(ToastContext);
+
+        // ==========================================
+        // 1. CUSTOM HOOK: useStorage (Persistencia)
+        // ==========================================
+        // Simula una capa de servicio de base de datos
+        const useStorage = () => {
+            const [data, setData] = useState({
+                usuarios: JSON.parse(localStorage.getItem('sgt_usuarios')) || [{ id: '1', email: 'admin@turnos.com', password: '123', role: 'admin' }],
+                turnos: JSON.parse(localStorage.getItem('sgt_turnos')) || [],
+                reservas: JSON.parse(localStorage.getItem('sgt_reservas')) || []
+            });
+
+            // Sincronización con localStorage
+            useEffect(() => {
+                localStorage.setItem('sgt_usuarios', JSON.stringify(data.usuarios));
+                localStorage.setItem('sgt_turnos', JSON.stringify(data.turnos));
+                localStorage.setItem('sgt_reservas', JSON.stringify(data.reservas));
+            }, [data]);
+
+            // Helpers CRUD
+            const updateState = (key, newValue) => setData(prev => ({ ...prev, [key]: newValue }));
+
+            return {
+                data,
+                addTurno: (turno) => updateState('turnos', [...data.turnos, { ...turno, id: generateId(), estado: 'activo', createdAt: new Date().toISOString() }]),
+                updateTurno: (id, fields) => updateState('turnos', data.turnos.map(t => t.id === id ? { ...t, ...fields } : t)),
+                deleteTurno: (id) => updateState('turnos', data.turnos.filter(t => t.id !== id)),
+                addReserva: (reserva) => updateState('reservas', [...data.reservas, { ...reserva, id: generateId(), estado: 'confirmada', fechaReserva: new Date().toISOString() }]),
+                updateReserva: (id, fields) => updateState('reservas', data.reservas.map(r => r.id === id ? { ...r, ...fields } : r)),
+                getUsuarioByEmail: (email) => data.usuarios.find(u => u.email === email)
+            };
+        };
+
+        // ==========================================
+        // 2. CONTEXT & CUSTOM HOOK: useAuth
+        // ==========================================
+        const AuthContext = createContext(null);
+
+        const AuthProvider = ({ children }) => {
+            const [user, setUser] = useState(() => {
+                const stored = localStorage.getItem('sgt_user');
+                return stored ? JSON.parse(stored) : null;
+            });
+
+            const login = (userData) => {
+                setUser(userData);
+                localStorage.setItem('sgt_user', JSON.stringify(userData));
+            };
+
+            const logout = () => {
+                setUser(null);
+                localStorage.removeItem('sgt_user');
+            };
+
+            return <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>{children}</AuthContext.Provider>;
+        };
+
+        const useAuth = () => {
+            const ctx = useContext(AuthContext);
+            if (!ctx) throw new Error("useAuth fuera de provider");
+            return ctx;
+        };
+
+        // ==========================================
+        // 3. LÓGICA DE NEGOCIO (CUSTOM HOOKS)
+        // ==========================================
+
+        /**
+         * useTurnos: Maneja la lógica compleja de turnos
+         * - Cálculo de disponibilidad en tiempo real.
+         * - Validaciones estrictas de solapamiento.
+         * - Validaciones de integridad (edición/borrado con reservas).
+         */
+        const useTurnos = () => {
+            const { data, addTurno, updateTurno, deleteTurno } = useStorage();
+            const { addToast } = useToast();
+
+            const getTurnosConDisponibilidad = () => {
+                return data.turnos.map(turno => {
+                    const reservasConfirmadas = data.reservas.filter(r => r.turnoId === turno.id && r.estado === 'confirmada').length;
+                    const disponibles = Math.max(0, turno.capacidadMaxima - reservasConfirmadas);
+                    return { ...turno, disponibles, ocupados: reservasConfirmadas };
+                });
+            };
+
+            // --- VALIDACIONES DE NEGOCIO ---
+
+            const validarSolapamiento = (nuevoInicio, nuevoFin, ignoreId = null) => {
+                // Validación básica de rango
+                if (nuevoInicio >= nuevoFin) {
+                    throw new Error("La hora de fin debe ser posterior a la hora de inicio.");
+                }
+
+                // Validación de solapamiento con otros turnos
+                // Si estamos editando (ignoreId existe), excluimos ese turno de la comparación
+                const existeSolapamiento = data.turnos.some(t => {
+                    if (ignoreId && t.id === ignoreId) return false;
+                    // Lógica: (InicioA < FinB) y (FinA > InicioB)
+                    return (nuevoInicio < t.horaFin && nuevoFin > t.horaInicio);
+                });
+
+                if (existeSolapamiento) {
+                    throw new Error("El horario seleccionado se solapa con otro turno existente.");
+                }
+            };
+
+            const validarEdicionPosible = (turnoId) => {
+                // REGLA DE NEGOCIO: No se puede modificar fecha/hora si hay reservas
+                const tieneReservas = data.reservas.some(r => r.turnoId === turnoId && r.estado === 'confirmada');
+                if (tieneReservas) {
+                    throw new Error("No se puede modificar este turno porque ya tiene reservas confirmadas. Debe cancelar las reservas primero.");
+                }
+            };
+
+            const validarBorradoPosible = (turnoId) => {
+                const tieneReservas = data.reservas.some(r => r.turnoId === turnoId);
+                if (tieneReservas) {
+                    throw new Error("No se puede eliminar un turno que tiene reservas asociadas.");
+                }
+            };
+
+            // --- ACCIONES PÚBLICAS ---
+
+            const crearTurno = (turnoData) => {
+                try {
+                    validarSolapamiento(turnoData.horaInicio, turnoData.horaFin);
+                    addTurno(turnoData);
+                    addToast("Turno creado exitosamente");
+                } catch (error) {
+                    addToast(error.message, "error");
+                    throw error; // Re-lanzar para que el componente maneje el estado de carga si es necesario
+                }
+            };
+
+            const editarTurno = (id, turnoData) => {
+                try {
+                    // Validamos si es posible editar (integridad de datos)
+                    validarEdicionPosible(id);
+                    
+                    // Validamos lógica de horarios
+                    validarSolapamiento(turnoData.horaInicio, turnoData.horaFin, id);
+                    
+                    updateTurno(id, turnoData);
+                    addToast("Turno actualizado correctamente");
+                } catch (error) {
+                    addToast(error.message, "error");
+                    throw error;
+                }
+            };
+
+            const borrarTurno = (id) => {
+                try {
+                    validarBorradoPosible(id);
+                    if (window.confirm("¿Está seguro de eliminar este turno?")) {
+                        deleteTurno(id);
+                        addToast("Turno eliminado");
+                    }
+                } catch (error) {
+                    addToast(error.message, "error");
+                }
+            };
+
+            return {
+                turnos: getTurnosConDisponibilidad(),
+                crearTurno,
+                editarTurno,
+                borrarTurno
+            };
+        };
+
+        /**
+         * useReservas: Maneja la lógica de reservas
+         */
+        const useReservas = () => {
+            const { data, addReserva, updateReserva } = useStorage();
+            const { addToast } = useToast();
+
+            const crearReserva = (reservaData) => {
+                const turno = data.turnos.find(t => t.id === reservaData.turnoId);
+                if (!turno) throw new Error("El turno seleccionado no existe.");
+
+                // Verificar cupo REAL en el momento de la reserva
+                const ocupados = data.reservas.filter(r => r.turnoId === turno.id && r.estado === 'confirmada').length;
+                if (ocupados >= turno.capacidadMaxima) {
+                    throw new Error("Lo sentimos, el turno se acaba de llenar.");
+                }
+
+                // Verificar si el usuario ya tiene reserva en este turno (opcional pero buena práctica)
+                const yaReservado = data.reservas.find(r => 
+                    r.turnoId === turno.id && 
+                    r.carnetIdentidad === reservaData.carnetIdentidad && 
+                    r.estado === 'confirmada'
+                );
+                
+                if (yaReservado) {
+                    throw new Error("Ya tienes una reserva confirmada para este turno con este documento.");
+                }
+
+                addReserva(reservaData);
+                addToast("¡Reserva confirmada con éxito!");
+            };
+
+            const cancelarReserva = (id) => {
+                if (window.confirm("¿Cancelar esta reserva? Esto liberará un cupo.")) {
+                    updateReserva(id, { estado: 'cancelada' });
+                    addToast("Reserva cancelada");
+                }
+            };
+
+            const getReservasConDetalle = () => {
+                return data.reservas.map(r => ({
+                    ...r,
+                    turno: data.turnos.find(t => t.id === r.turnoId) || null
+                })).sort((a,b) => new Date(b.fechaReserva) - new Date(a.fechaReserva));
+            };
+
+            return {
+                reservas: getReservasConDetalle(),
+                crearReserva,
+                cancelarReserva
+            };
+        };
+
+        // ==========================================
+        // 4. COMPONENTES DE PRESENTACIÓN
+        // ==========================================
+
+        const Modal = ({ isOpen, onClose, title, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="modal-title">{title}</h3>
+                            <button onClick={onClose} className="btn btn-sm btn-outline" style={{border:'none', fontSize:'1.5rem'}}>✕</button>
+                        </div>
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        const Login = () => {
+            const { login } = useAuth();
+            const { getUsuarioByEmail } = useStorage();
+            const navigate = useNavigate();
+            const [formData, setFormData] = useState({ email: '', password: '' });
+            const [error, setError] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const user = getUsuarioByEmail(formData.email);
+                if (user && user.password === formData.password) {
+                    login(user);
+                    navigate('/admin');
+                } else {
+                    setError('Credenciales inválidas');
+                }
+            };
+
+            return (
+                <div className="container" style={{ maxWidth: '400px', marginTop: '4rem' }}>
+                    <div className="card" style={{textAlign:'center'}}>
+                        <h2 className="modal-title mb-4">Acceso Admin</h2>
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group" style={{textAlign:'left'}}>
+                                <label className="form-label">Email</label>
+                                <input type="email" className="form-input" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
+                            </div>
+                            <div className="form-group" style={{textAlign:'left'}}>
+                                <label className="form-label">Contraseña</label>
+                                <input type="password" className="form-input" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required />
+                            </div>
+                            {error && <div style={{color: 'var(--danger)', marginBottom: '1rem', fontSize:'0.9rem'}}>{error}</div>}
+                            <button type="submit" className="btn btn-primary w-full">Ingresar</button>
+                        </form>
+                        <div className="mt-4 text-sm text-muted">
+                            <p>Demo: admin@turnos.com / 123</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TurnosDisponibles = () => {
+            const { turnos } = useTurnos();
+            const { crearReserva } = useReservas();
+            const { user } = useAuth();
+            const navigate = useNavigate();
+            const { addToast } = useToast();
+            
+            const [modalOpen, setModalOpen] = useState(false);
+            const [selectedTurno, setSelectedTurno] = useState(null);
+            const [formData, setFormData] = useState({ nombre: '', ci: '' });
+
+            const handleOpenReserva = (turno) => {
+                if (turno.disponibles <= 0) {
+                    addToast("Este turno está completo", "error");
+                    return;
+                }
+                setSelectedTurno(turno);
+                setFormData({ nombre: '', ci: '' });
+                setModalOpen(true);
+            };
+
+            const handleReservar = (e) => {
+                e.preventDefault();
+                try {
+                    crearReserva({
+                        turnoId: selectedTurno.id,
+                        nombreCliente: formData.nombre,
+                        carnetIdentidad: formData.ci
+                    });
+                    setModalOpen(false);
+                } catch (err) {
+                    // El error ya se muestra vía Toast en useReservas, pero podemos hacer algo extra si queremos
+                    console.error(err);
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="flex justify-between items-center" style={{marginBottom: '2rem'}}>
+                        <h1 style={{fontSize:'1.8rem'}}>Turnos Disponibles</h1>
+                        {!user ? 
+                            <button className="btn btn-outline" onClick={() => navigate('/login')}>Acceso Admin</button> : 
+                            <button className="btn btn-primary" onClick={() => navigate('/admin')}>Panel de Control</button>
+                        }
+                    </div>
+
+                    <div className="grid">
+                        {turnos.length === 0 ? <p className="text-muted">No hay turnos programados.</p> : 
+                            turnos.map(turno => (
+                                <div key={turno.id} className="card">
+                                    <div className="card-header">
+                                        <div>
+                                            <h3 className="card-title">{turno.nombre || 'Turno General'}</h3>
+                                            <div className="card-subtitle">{turno.fecha}</div>
+                                        </div>
+                                        <span className={`card-badge ${turno.disponibles > 0 ? 'badge-active' : 'badge-full'}`}>
+                                            {turno.disponibles} disponibles
+                                        </span>
+                                    </div>
+                                    <div className="card-body">
+                                        <p><strong>Horario:</strong> {turno.horaInicio} - {turno.horaFin}</p>
+                                        {turno.descripcion && (
+                                            <div className="card-desc">
+                                                "{turno.descripcion}"
+                                            </div>
+                                        )}
+                                        <div style={{marginTop: '10px', fontSize: '0.8rem', color: '#64748b'}}>
+                                            Capacidad total: {turno.capacidadMaxima} personas
+                                        </div>
+                                    </div>
+                                    <div className="card-footer">
+                                        <button 
+                                            className={`btn w-full ${turno.disponibles > 0 ? 'btn-primary' : 'btn-outline'}`} 
+                                            disabled={turno.disponibles === 0}
+                                            onClick={() => handleOpenReserva(turno)}
+                                        >
+                                            {turno.disponibles > 0 ? 'Reservar Cupo' : 'Agotado'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        }
+                    </div>
+
+                    <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Confirmar Reserva">
+                        <div className="mb-4 p-3" style={{background:'#f1f5f9', borderRadius:'0.5rem'}}>
+                            <p className="text-sm text-muted">Reservando para:</p>
+                            <strong>{selectedTurno?.nombre}</strong><br/>
+                            <span className="text-sm">{selectedTurno?.fecha} | {selectedTurno?.horaInicio} - {selectedTurno?.horaFin}</span>
+                        </div>
+                        <form onSubmit={handleReservar}>
+                            <div className="form-group">
+                                <label className="form-label">Nombre Completo</label>
+                                <input className="form-input" required value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Carnet Identidad / DNI</label>
+                                <input className="form-input" required value={formData.ci} onChange={e => setFormData({...formData, ci: e.target.value})} />
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancelar</button>
+                                <button type="submit" className="btn btn-primary">Confirmar</button>
+                            </div>
+                        </form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        const CRUDTurnos = () => {
+            const { turnos, crearTurno, editarTurno, borrarTurno } = useTurnos();
+            const [modalOpen, setModalOpen] = useState(false);
+            const [isEditing, setIsEditing] = useState(false);
+            const [editId, setEditId] = useState(null);
+
+            const [formData, setFormData] = useState({ 
+                nombre: '', descripcion: '', fecha: '', 
+                horaInicio: '', horaFin: '', capacidadMaxima: '' 
+            });
+
+            const resetForm = () => {
+                setFormData({ nombre: '', descripcion: '', fecha: '', horaInicio: '', horaFin: '', capacidadMaxima: '' });
+                setIsEditing(false);
+                setEditId(null);
+                setModalOpen(false);
+            };
+
+            const openCreate = () => {
+                resetForm();
+                setModalOpen(true);
+            };
+
+            const openEdit = (turno) => {
+                setFormData({
+                    nombre: turno.nombre, descripcion: turno.descripcion, fecha: turno.fecha,
+                    horaInicio: turno.horaInicio, horaFin: turno.horaFin, capacidadMaxima: turno.capacidadMaxima
+                });
+                setIsEditing(true);
+                setEditId(turno.id);
+                setModalOpen(true);
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const payload = { ...formData, capacidadMaxima: Number(formData.capacidadMaxima) };
+                
+                // Llamada asíncrona simulada (manejada dentro de los hooks con try/catch)
+                const action = isEditing ? editarTurno(editId, payload) : crearTurno(payload);
+                
+                // Si la promesa no falla (los hooks manejan los errores visualmente, cerramos)
+                action.then ? action.then(resetForm).catch(() => {}) : resetForm();
+                
+                // Nota: En nuestra implementación sync, editarTurno lanza error, así que el catch en useTurnos maneja el UI.
+                // Solo cerramos si no hubo error (o simplemente confiamos en el usuario leyendo el toast).
+                // Para simplificar flujo: cerramos siempre, si hubo error el usuario tendrá que reabrir o ver el toast.
+                // MEJOR: No cerrar si hay error.
+                
+                // Truco simple: usar una bandera o simplemente verificar si editarTurno lanzó error.
+                // Como editarTurno lanza error, el código abajo no se ejecuta si falla.
+                try {
+                    if (isEditing) editarTurno(editId, payload);
+                    else crearTurno(payload);
+                    resetForm();
+                } catch (err) {
+                    // Error ya manejado en hook
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2>Gestión de Turnos</h2>
+                        <button className="btn btn-primary" onClick={openCreate}>+ Nuevo Turno</button>
+                    </div>
+
+                    <div className="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Fecha</th>
+                                    <th>Horario</th>
+                                    <th>Ocupación</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {turnos.map(t => (
+                                    <tr key={t.id}>
+                                        <td>
+                                            <div style={{fontWeight:600}}>{t.nombre}</div>
+                                            <div className="text-sm text-muted" style={{maxWidth:'200px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{t.descripcion}</div>
+                                        </td>
+                                        <td>{t.fecha}</td>
+                                        <td>{t.horaInicio} - {t.horaFin}</td>
+                                        <td>
+                                            <div style={{width:'100px', height:'6px', background:'#e2e8f0', borderRadius:'3px', marginBottom:'4px'}}>
+                                                <div style={{width: `${(t.ocupados/t.capacidadMaxima)*100}%`, background: t.ocupados === t.capacidadMaxima ? 'var(--danger)' : 'var(--success)', height:'100%', borderRadius:'3px'}}></div>
+                                            </div>
+                                            <span className="text-sm">{t.ocupados} / {t.capacidadMaxima}</span>
+                                        </td>
+                                        <td><span className="card-badge badge-active">{t.estado}</span></td>
+                                        <td>
+                                            <div className="flex gap-2">
+                                                <button className="btn btn-sm btn-outline" onClick={() => openEdit(t)}>Editar</button>
+                                                <button className="btn btn-sm btn-danger" onClick={() => borrarTurno(t.id)}>Borrar</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <Modal isOpen={modalOpen} onClose={resetForm} title={isEditing ? 'Editar Turno' : 'Crear Turno'}>
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label">Nombre del Turno *</label>
+                                <input className="form-input" required placeholder="Ej: Medicina General - Mañana" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Descripción</label>
+                                <textarea className="form-textarea" placeholder="Detalles adicionales..." value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})}></textarea>
+                            </div>
+                            <div className="grid-2">
+                                <div className="form-group">
+                                    <label className="form-label">Fecha *</label>
+                                    <input type="date" className="form-input" required value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value})} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Capacidad *</label>
+                                    <input type="number" min="1" className="form-input" required value={formData.capacidadMaxima} onChange={e => setFormData({...formData, capacidadMaxima: e.target.value})} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Inicio *</label>
+                                    <input type="time" className="form-input" required value={formData.horaInicio} onChange={e => setFormData({...formData, horaInicio: e.target.value})} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Fin *</label>
+                                    <input type="time" className="form-input" required value={formData.horaFin} onChange={e => setFormData({...formData, horaFin: e.target.value})} />
+                                </div>
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="btn btn-outline" onClick={resetForm}>Cancelar</button>
+                                <button type="submit" className="btn btn-primary">Guardar</button>
+                            </div>
+                        </form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        const ListadoReservas = () => {
+            const { reservas, cancelarReserva } = useReservas();
+
+            return (
+                <div className="container">
+                    <h2 className="mb-4">Registro de Reservas</h2>
+                    <div className="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha/Hora Reserva</th>
+                                    <th>Cliente</th>
+                                    <th>Documento</th>
+                                    <th>Turno Asignado</th>
+                                    <th>Estado</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reservas.map(r => (
+                                    <tr key={r.id}>
+                                        <td>
+                                            <div>{new Date(r.fechaReserva).toLocaleDateString()}</div>
+                                            <div className="text-sm text-muted">{new Date(r.fechaReserva).toLocaleTimeString()}</div>
+                                        </td>
+                                        <td>{r.nombreCliente}</td>
+                                        <td>{r.carnetIdentidad}</td>
+                                        <td>
+                                            {r.turno ? (
+                                                <div>
+                                                    <span style={{fontWeight:600}}>{r.turno.nombre}</span>
+                                                    <div className="text-sm text-muted">{r.turno.fecha} {r.turno.horaInicio}</div>
+                                                </div>
+                                            ) : <span className="text-muted">Turno eliminado</span>}
+                                        </td>
+                                        <td>
+                                            <span className={`card-badge ${r.estado === 'confirmada' ? 'badge-active' : 'badge-full'}`}>
+                                                {r.estado}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {r.estado === 'confirmada' && (
+                                                <button className="btn btn-sm btn-danger" onClick={() => cancelarReserva(r.id)}>Cancelar</button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 5. LAYOUTS & ROUTING
+        // ==========================================
+
+        const ProtectedRoute = ({ children }) => {
+            const { isAuthenticated } = useAuth();
+            return isAuthenticated ? children : <Navigate to="/login" replace />;
+        };
+
+        const AdminLayout = () => {
+            const { logout, user } = useAuth();
+            const location = useLocation();
+            
+            // Helper para estilo activo
+            const isActive = (path) => location.pathname.includes(path) ? 'var(--primary)' : 'var(--text-main)';
+
+            return (
+                <div>
+                    <header>
+                        <div className="container nav-content">
+                            <Link to="/admin" className="nav-brand">
+                                <span>🗓️</span> Turnos Admin
+                            </Link>
+                            <div className="nav-links">
+                                <span className="text-sm text-muted">Hola, {user?.email.split('@')[0]}</span>
+                                <button onClick={logout} className="btn btn-sm btn-outline">Salir</button>
+                            </div>
+                        </div>
+                    </header>
+                    <div className="container mt-4">
+                        <nav style={{marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem'}}>
+                            <Link to="/admin/turnos" className="btn btn-outline mr-2" style={{marginRight: '10px', color: isActive('turnos'), borderColor: isActive('turnos') === 'var(--primary)' ? 'var(--primary)' : 'var(--border)'}}>Gestión Turnos</Link>
+                            <Link to="/admin/reservas" className="btn btn-outline" style={{color: isActive('reservas'), borderColor: isActive('reservas') === 'var(--primary)' ? 'var(--primary)' : 'var(--border)'}}>Ver Reservas</Link>
+                        </nav>
+                        <Outlet />
+                    </div>
+                </div>
+            );
+        };
+
+        const PublicLayout = () => {
+            return (
+                <div>
+                    <header>
+                        <div className="container nav-content">
+                            <Link to="/" className="nav-brand">
+                                <span>🗓️</span> Sistema de Turnos
+                            </Link>
+                            <Link to="/login" className="btn btn-sm btn-outline">Admin Login</Link>
+                        </div>
+                    </header>
+                    <main>
+                        <Outlet />
+                    </main>
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <HashRouter>
+                    <ToastProvider>
+                        <AuthProvider>
+                            <Routes>
+                                <Route element={<PublicLayout />}>
+                                    <Route path="/" element={<TurnosDisponibles />} />
+                                    <Route path="/login" element={<Login />} />
+                                </Route>
+                                
+                                <Route path="/admin" element={
+                                    <ProtectedRoute>
+                                        <AdminLayout />
+                                    </ProtectedRoute>
+                                }>
+                                    <Route path="turnos" element={<CRUDTurnos />} />
+                                    <Route path="reservas" element={<ListadoReservas />} />
+                                </Route>
+                            </Routes>
+                        </AuthProvider>
+                    </ToastProvider>
+                </HashRouter>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
