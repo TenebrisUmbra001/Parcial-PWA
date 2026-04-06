@@ -171,7 +171,6 @@
         // ==========================================
         // 1. CUSTOM HOOK: useStorage (Persistencia)
         // ==========================================
-        // Simula una capa de servicio de base de datos
         const useStorage = () => {
             const [data, setData] = useState({
                 usuarios: JSON.parse(localStorage.getItem('sgt_usuarios')) || [{ id: '1', email: 'admin@turnos.com', password: '123', role: 'admin' }],
@@ -179,14 +178,12 @@
                 reservas: JSON.parse(localStorage.getItem('sgt_reservas')) || []
             });
 
-            // Sincronización con localStorage
             useEffect(() => {
                 localStorage.setItem('sgt_usuarios', JSON.stringify(data.usuarios));
                 localStorage.setItem('sgt_turnos', JSON.stringify(data.turnos));
                 localStorage.setItem('sgt_reservas', JSON.stringify(data.reservas));
             }, [data]);
 
-            // Helpers CRUD
             const updateState = (key, newValue) => setData(prev => ({ ...prev, [key]: newValue }));
 
             return {
@@ -234,12 +231,6 @@
         // 3. LÓGICA DE NEGOCIO (CUSTOM HOOKS)
         // ==========================================
 
-        /**
-         * useTurnos: Maneja la lógica compleja de turnos
-         * - Cálculo de disponibilidad en tiempo real.
-         * - Validaciones estrictas de solapamiento.
-         * - Validaciones de integridad (edición/borrado con reservas).
-         */
         const useTurnos = () => {
             const { data, addTurno, updateTurno, deleteTurno } = useStorage();
             const { addToast } = useToast();
@@ -252,32 +243,23 @@
                 });
             };
 
-            // --- VALIDACIONES DE NEGOCIO ---
-
             const validarSolapamiento = (nuevoInicio, nuevoFin, ignoreId = null) => {
-                // Validación básica de rango
                 if (nuevoInicio >= nuevoFin) {
                     throw new Error("La hora de fin debe ser posterior a la hora de inicio.");
                 }
-
-                // Validación de solapamiento con otros turnos
-                // Si estamos editando (ignoreId existe), excluimos ese turno de la comparación
                 const existeSolapamiento = data.turnos.some(t => {
                     if (ignoreId && t.id === ignoreId) return false;
-                    // Lógica: (InicioA < FinB) y (FinA > InicioB)
                     return (nuevoInicio < t.horaFin && nuevoFin > t.horaInicio);
                 });
-
                 if (existeSolapamiento) {
                     throw new Error("El horario seleccionado se solapa con otro turno existente.");
                 }
             };
 
             const validarEdicionPosible = (turnoId) => {
-                // REGLA DE NEGOCIO: No se puede modificar fecha/hora si hay reservas
                 const tieneReservas = data.reservas.some(r => r.turnoId === turnoId && r.estado === 'confirmada');
                 if (tieneReservas) {
-                    throw new Error("No se puede modificar este turno porque ya tiene reservas confirmadas. Debe cancelar las reservas primero.");
+                    throw new Error("No se puede modificar este turno porque ya tiene reservas confirmadas.");
                 }
             };
 
@@ -288,8 +270,6 @@
                 }
             };
 
-            // --- ACCIONES PÚBLICAS ---
-
             const crearTurno = (turnoData) => {
                 try {
                     validarSolapamiento(turnoData.horaInicio, turnoData.horaFin);
@@ -297,18 +277,14 @@
                     addToast("Turno creado exitosamente");
                 } catch (error) {
                     addToast(error.message, "error");
-                    throw error; // Re-lanzar para que el componente maneje el estado de carga si es necesario
+                    throw error; 
                 }
             };
 
             const editarTurno = (id, turnoData) => {
                 try {
-                    // Validamos si es posible editar (integridad de datos)
                     validarEdicionPosible(id);
-                    
-                    // Validamos lógica de horarios
                     validarSolapamiento(turnoData.horaInicio, turnoData.horaFin, id);
-                    
                     updateTurno(id, turnoData);
                     addToast("Turno actualizado correctamente");
                 } catch (error) {
@@ -337,9 +313,6 @@
             };
         };
 
-        /**
-         * useReservas: Maneja la lógica de reservas
-         */
         const useReservas = () => {
             const { data, addReserva, updateReserva } = useStorage();
             const { addToast } = useToast();
@@ -347,24 +320,18 @@
             const crearReserva = (reservaData) => {
                 const turno = data.turnos.find(t => t.id === reservaData.turnoId);
                 if (!turno) throw new Error("El turno seleccionado no existe.");
-
-                // Verificar cupo REAL en el momento de la reserva
                 const ocupados = data.reservas.filter(r => r.turnoId === turno.id && r.estado === 'confirmada').length;
                 if (ocupados >= turno.capacidadMaxima) {
                     throw new Error("Lo sentimos, el turno se acaba de llenar.");
                 }
-
-                // Verificar si el usuario ya tiene reserva en este turno (opcional pero buena práctica)
                 const yaReservado = data.reservas.find(r => 
                     r.turnoId === turno.id && 
                     r.carnetIdentidad === reservaData.carnetIdentidad && 
                     r.estado === 'confirmada'
                 );
-                
                 if (yaReservado) {
                     throw new Error("Ya tienes una reserva confirmada para este turno con este documento.");
                 }
-
                 addReserva(reservaData);
                 addToast("¡Reserva confirmada con éxito!");
             };
@@ -434,7 +401,7 @@
                         <form onSubmit={handleSubmit}>
                             <div className="form-group" style={{textAlign:'left'}}>
                                 <label className="form-label">Email</label>
-                                <input type="email" className="form-input" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
+                                <input type="email" className="form-input" value={formData.email} onChange={e => setFormData({...formData, email: es.value})} required />
                             </div>
                             <div className="form-group" style={{textAlign:'left'}}>
                                 <label className="form-label">Contraseña</label>
@@ -454,8 +421,6 @@
         const TurnosDisponibles = () => {
             const { turnos } = useTurnos();
             const { crearReserva } = useReservas();
-            const { user } = useAuth();
-            const navigate = useNavigate();
             const { addToast } = useToast();
             
             const [modalOpen, setModalOpen] = useState(false);
@@ -482,20 +447,14 @@
                     });
                     setModalOpen(false);
                 } catch (err) {
-                    // El error ya se muestra vía Toast en useReservas, pero podemos hacer algo extra si queremos
                     console.error(err);
                 }
             };
 
             return (
                 <div className="container">
-                    <div className="flex justify-between items-center" style={{marginBottom: '2rem'}}>
-                        <h1 style={{fontSize:'1.8rem'}}>Turnos Disponibles</h1>
-                        {!user ? 
-                            <button className="btn btn-outline" onClick={() => navigate('/login')}>Acceso Admin</button> : 
-                            <button className="btn btn-primary" onClick={() => navigate('/admin')}>Panel de Control</button>
-                        }
-                    </div>
+                    {/* Se eliminó el botón redundante de aquí */}
+                    <h1 style={{fontSize:'1.8rem', marginBottom:'2rem'}}>Turnos Disponibles</h1>
 
                     <div className="grid">
                         {turnos.length === 0 ? <p className="text-muted">No hay turnos programados.</p> : 
@@ -597,25 +556,12 @@
                 e.preventDefault();
                 const payload = { ...formData, capacidadMaxima: Number(formData.capacidadMaxima) };
                 
-                // Llamada asíncrona simulada (manejada dentro de los hooks con try/catch)
-                const action = isEditing ? editarTurno(editId, payload) : crearTurno(payload);
-                
-                // Si la promesa no falla (los hooks manejan los errores visualmente, cerramos)
-                action.then ? action.then(resetForm).catch(() => {}) : resetForm();
-                
-                // Nota: En nuestra implementación sync, editarTurno lanza error, así que el catch en useTurnos maneja el UI.
-                // Solo cerramos si no hubo error (o simplemente confiamos en el usuario leyendo el toast).
-                // Para simplificar flujo: cerramos siempre, si hubo error el usuario tendrá que reabrir o ver el toast.
-                // MEJOR: No cerrar si hay error.
-                
-                // Truco simple: usar una bandera o simplemente verificar si editarTurno lanzó error.
-                // Como editarTurno lanza error, el código abajo no se ejecuta si falla.
                 try {
                     if (isEditing) editarTurno(editId, payload);
                     else crearTurno(payload);
                     resetForm();
                 } catch (err) {
-                    // Error ya manejado en hook
+                    // Error manejado en hook
                 }
             };
 
@@ -771,7 +717,6 @@
             const { logout, user } = useAuth();
             const location = useLocation();
             
-            // Helper para estilo activo
             const isActive = (path) => location.pathname.includes(path) ? 'var(--primary)' : 'var(--text-main)';
 
             return (
@@ -799,6 +744,9 @@
         };
 
         const PublicLayout = () => {
+            const { isAuthenticated, user, logout } = useAuth();
+            const navigate = useNavigate();
+
             return (
                 <div>
                     <header>
@@ -806,7 +754,24 @@
                             <Link to="/" className="nav-brand">
                                 <span>🗓️</span> Sistema de Turnos
                             </Link>
-                            <Link to="/login" className="btn btn-sm btn-outline">Admin Login</Link>
+                            <div className="nav-links">
+                                {/* Botón único inteligente en el Header */}
+                                {!isAuthenticated ? (
+                                    <button className="btn btn-sm btn-primary" onClick={() => navigate('/login')}>
+                                        Acceso Admin
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-muted">Hola, {user?.email.split('@')[0]}</span>
+                                        <button className="btn btn-sm btn-primary" onClick={() => navigate('/admin')}>
+                                            Ir al Panel
+                                        </button>
+                                        <button className="btn btn-sm btn-outline" onClick={logout}>
+                                            Salir
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </header>
                     <main>
